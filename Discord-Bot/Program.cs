@@ -10,9 +10,7 @@ namespace Discord_Bot
         private readonly DiscordSocketClient _client;
         
         static void Main(string[] args)
-        {
-            new Program().MainAsync().GetAwaiter().GetResult();
-        }
+            => new Program().MainAsync().GetAwaiter().GetResult();
 
         public Program()
         {
