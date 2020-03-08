@@ -1,13 +1,17 @@
 ﻿using System;
+using System.Globalization;
 using System.Threading.Tasks;
 using Discord;
 using Discord.WebSocket;
+using Discord_Bot.Db;
+using Discord_Bot.Util;
 
 namespace Discord_Bot
 {
     class Program
     {
         private readonly DiscordSocketClient _client;
+        private readonly BdayBotContext _db;
         
         static void Main(string[] args)
             => new Program().MainAsync().GetAwaiter().GetResult();
@@ -15,6 +19,7 @@ namespace Discord_Bot
         public Program()
         {
             _client = new DiscordSocketClient();
+            _db = new BdayBotContext();
 
             _client.Log += LogAsync;
             _client.Ready += ReadyAsync;
@@ -23,6 +28,7 @@ namespace Discord_Bot
 
         public async Task MainAsync()
         {
+            
             string? token;
             // TODO: Remove naive config checking
             if ((token = Environment.GetEnvironmentVariable("TOKEN")) == null)
@@ -45,6 +51,24 @@ namespace Discord_Bot
         {
             Console.WriteLine($"Logged in as {_client.CurrentUser}");
 
+            var announcer = new BirthdayAnnouncer(_client, _db);
+
+            Task.Run(async () =>
+            {
+                while (true)
+                {
+                    DateTime tomorrow = DateTime.UtcNow.Date.AddDays(1);
+                    TimeSpan span = tomorrow - DateTime.UtcNow;
+                    Console.WriteLine(span);
+                    if (span.TotalMilliseconds >= 0)
+                    {
+                        await Task.Delay(span);
+
+                        await announcer.Announce(tomorrow);
+                    }
+                }
+            });
+
             return Task.CompletedTask;
         }
 
@@ -53,6 +77,11 @@ namespace Discord_Bot
             if (message.Author.IsBot)
                 return;
 
+            foreach (User user in _db.User)
+            {
+                Console.WriteLine(user.UserId + ": " + user.Birthday);
+            }
+            
             string? prefix;
             // TODO: Remove naive config checking
             if ((prefix = Environment.GetEnvironmentVariable("PREFIX")) == null)
